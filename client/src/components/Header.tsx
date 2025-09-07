@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from "@/components/ui/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { GraduationCap, Star, ChevronDown, User, LogOut } from 'lucide-react';
@@ -13,6 +14,29 @@ interface HeaderProps {
 
 export default function Header({ user }: HeaderProps) {
   const [location] = useLocation();
+  const queryClient = useQueryClient();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      window.location.href = '/';
+    }
+  });
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    logoutMutation.mutate();
+  };
   
   const navItems = [
     { href: '/', label: 'Dashboard', active: location === '/' },
@@ -98,11 +122,9 @@ export default function Header({ user }: HeaderProps) {
                     Profile
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <a href="/api/logout" data-testid="logout-link">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Log Out
-                  </a>
+                <DropdownMenuItem onClick={handleLogout} data-testid="logout-link">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  {logoutMutation.isPending ? 'Logging out...' : 'Log Out'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

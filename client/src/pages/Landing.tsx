@@ -88,7 +88,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 className="bg-white text-primary hover:bg-gray-100"
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => window.location.href = '/auth'}
                 data-testid="button-get-started"
               >
                 <Zap className="w-5 h-5 mr-2" />
@@ -182,7 +182,7 @@ export default function Landing() {
           <Button 
             size="lg" 
             className="bg-white text-primary hover:bg-gray-100"
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => window.location.href = '/auth'}
             data-testid="button-start-learning"
           >
             <GraduationCap className="w-5 h-5 mr-2" />
