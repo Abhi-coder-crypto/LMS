@@ -68,12 +68,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser(userData);
       
       // Create session
-      req.session.userId = user.id;
+      req.session.userId = user._id.toString();
       
       res.status(201).json({ 
         message: 'Registration successful', 
         user: {
-          id: user.id,
+          id: user._id.toString(),
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -101,12 +101,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create session
-      req.session.userId = user.id;
+      req.session.userId = user._id.toString();
       
       res.json({ 
         message: 'Login successful', 
         user: {
-          id: user.id,
+          id: user._id.toString(),
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -137,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
       res.json({
-        id: user.id,
+        id: user._id.toString(),
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,

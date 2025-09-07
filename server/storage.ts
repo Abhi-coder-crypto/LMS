@@ -114,7 +114,7 @@ export class DatabaseStorage implements IStorage {
     // Return user without password
     const userObject = savedUser.toObject();
     delete userObject.password;
-    return userObject as UserDocument;
+    return userObject;
   }
 
   async authenticateUser(loginData: LoginData): Promise<UserDocument | null> {
@@ -137,7 +137,7 @@ export class DatabaseStorage implements IStorage {
     // Return user without password
     const userObject = user.toObject();
     delete userObject.password;
-    return userObject as UserDocument;
+    return userObject;
   }
 
   async upsertUser(userData: UpsertUser): Promise<UserDocument> {
