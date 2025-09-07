@@ -1,0 +1,613 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigitioHub Academy - Java Learning Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                },
+                fontFamily: {
+                    sans: ["Inter", "system-ui", "sans-serif"],
+                }
+            },
+        }
+    };
+    </script>
+    <style>
+        :root {
+            --background: hsl(210 40% 98%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(214 100% 27%);
+            --primary-foreground: hsl(210 40% 98%);
+            --secondary: hsl(158 64% 52%);
+            --secondary-foreground: hsl(0 0% 100%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(43 96% 56%);
+            --accent-foreground: hsl(222.2 84% 4.9%);
+            --destructive: hsl(0 84% 60%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(214 100% 27%);
+            --radius: 0.75rem;
+        }
+        
+        .monaco-editor-mock {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 16px;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+        
+        .syntax-keyword { color: #569cd6; }
+        .syntax-string { color: #ce9178; }
+        .syntax-comment { color: #6a9955; }
+        .syntax-number { color: #b5cea8; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-background text-foreground">
+    <!-- @COMPONENT: Header [navigation with user profile] -->
+    <header class="bg-card border-b border-border shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-primary">
+                            <i class="fas fa-graduation-cap mr-2"></i>
+                            DigitioHub Academy
+                        </h1>
+                    </div>
+                    <nav class="hidden md:flex space-x-6">
+                        <a href="#" class="text-primary font-medium border-b-2 border-primary pb-4">Dashboard</a>
+                        <a href="#" class="text-muted-foreground hover:text-foreground transition-colors pb-4">Courses</a>
+                        <a href="#" class="text-muted-foreground hover:text-foreground transition-colors pb-4">Practice</a>
+                        <a href="#" class="text-muted-foreground hover:text-foreground transition-colors pb-4">Community</a>
+                    </nav>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 bg-accent/20 px-3 py-1 rounded-full">
+                        <i class="fas fa-star text-accent"></i>
+                        <span class="text-sm font-medium" data-bind="user.xp">1,250 XP</span>
+                    </div>
+                    
+                    <div class="relative">
+                        <button class="flex items-center space-x-3 bg-muted/50 hover:bg-muted transition-colors px-3 py-2 rounded-lg">
+                            <!-- Profile picture placeholder -->
+                            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-primary-foreground text-sm"></i>
+                            </div>
+                            <span class="text-sm font-medium hidden sm:block" data-bind="user.name">Abhijeet Sharma</span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- @COMPONENT: WelcomeBanner [personalized welcome message] -->
+        <div class="bg-gradient-to-r from-primary to-blue-600 rounded-xl p-6 text-primary-foreground mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold mb-2">Welcome back, Abhijeet! 👋</h2>
+                    <p class="text-primary-foreground/90">Ready to continue your Java journey? You're doing great!</p>
+                </div>
+                <div class="hidden md:block">
+                    <!-- Motivational illustration -->
+                    <div class="w-24 h-24 bg-primary-foreground/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-code text-4xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: WelcomeBanner -->
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Content Area -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- @COMPONENT: CurrentLearningSection [active course progress] -->
+                <section>
+                    <h3 class="text-2xl font-bold mb-6">Continue Learning</h3>
+                    
+                    <div class="bg-card rounded-xl border border-border p-6 shadow-sm">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center">
+                                    <i class="fab fa-java text-primary text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-semibold">Java Fundamentals</h4>
+                                    <p class="text-muted-foreground">Intermediate Level • Module 3 of 8</p>
+                                </div>
+                            </div>
+                            <span class="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-sm font-medium">
+                                65% Complete
+                            </span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-muted-foreground">Progress</span>
+                                <span class="text-sm font-medium">5/8 modules</span>
+                            </div>
+                            <div class="w-full bg-muted rounded-full h-3">
+                                <div class="bg-gradient-to-r from-secondary to-green-400 h-3 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-muted-foreground">
+                                <i class="fas fa-clock mr-2"></i>
+                                Next: Object-Oriented Programming
+                            </div>
+                            <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors">
+                                Continue Learning
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                <!-- @END_COMPONENT: CurrentLearningSection -->
+
+                <!-- @COMPONENT: CodeCompilerSection [online IDE interface] -->
+                <section>
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-2xl font-bold">Practice Arena</h3>
+                        <div class="flex space-x-2">
+                            <button class="px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg text-sm transition-colors">
+                                <i class="fas fa-save mr-2"></i>Save
+                            </button>
+                            <button class="px-4 py-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-play mr-2"></i>Run Code
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+                        <!-- Problem Statement -->
+                        <div class="p-6 border-b border-border">
+                            <h4 class="text-lg font-semibold mb-3">Problem: Sum of Two Numbers</h4>
+                            <p class="text-muted-foreground mb-4">
+                                Write a Java program that takes two integers as input and returns their sum. 
+                                Your solution should handle edge cases like negative numbers.
+                            </p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-sm">Easy</span>
+                                <span class="bg-accent/20 text-accent-foreground px-3 py-1 rounded-full text-sm">+50 XP</span>
+                                <span class="bg-muted px-3 py-1 rounded-full text-sm">Arrays</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Code Editor -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2">
+                            <div class="p-4 border-b lg:border-b-0 lg:border-r border-border">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h5 class="font-medium">Solution.java</h5>
+                                    <select class="text-sm border border-border rounded px-2 py-1">
+                                        <option>Java</option>
+                                        <option>Python</option>
+                                        <option>C++</option>
+                                    </select>
+                                </div>
+                                <div class="monaco-editor-mock text-sm">
+<span class="syntax-keyword">public class</span> Solution {
+    <span class="syntax-keyword">public static</span> <span class="syntax-keyword">int</span> addTwoNumbers(<span class="syntax-keyword">int</span> a, <span class="syntax-keyword">int</span> b) {
+        <span class="syntax-comment">// TODO: Implement your solution here</span>
+        <span class="syntax-keyword">return</span> <span class="syntax-number">0</span>;
+    }
+    
+    <span class="syntax-keyword">public static void</span> main(String[] args) {
+        System.out.println(addTwoNumbers(<span class="syntax-number">5</span>, <span class="syntax-number">3</span>));
+    }
+}
+                                </div>
+                            </div>
+                            
+                            <!-- Output/Results -->
+                            <div class="p-4">
+                                <h5 class="font-medium mb-3">Output</h5>
+                                <div class="bg-muted/50 rounded-lg p-4 mb-4">
+                                    <div class="text-sm font-mono">
+                                        <div class="text-secondary mb-1">✓ Test Case 1: Passed</div>
+                                        <div class="text-secondary mb-1">✓ Test Case 2: Passed</div>
+                                        <div class="text-destructive mb-1">✗ Test Case 3: Failed</div>
+                                        <div class="text-muted-foreground mt-2">
+                                            Expected: 8, Got: 0
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span>Progress</span>
+                                        <span>2/3 Test Cases</span>
+                                    </div>
+                                    <div class="w-full bg-muted rounded-full h-2">
+                                        <div class="bg-accent h-2 rounded-full" style="width: 66%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Bar -->
+                        <div class="p-4 border-t border-border bg-muted/30">
+                            <div class="flex items-center justify-between">
+                                <div class="flex space-x-2">
+                                    <button class="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        <i class="fas fa-lightbulb mr-1"></i>Hint
+                                    </button>
+                                    <button class="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                        <i class="fas fa-book mr-1"></i>Solution
+                                    </button>
+                                </div>
+                                <button class="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors">
+                                    Submit Solution
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- @END_COMPONENT: CodeCompilerSection -->
+
+                <!-- @COMPONENT: CourseStructure [learning path visualization] -->
+                <section>
+                    <h3 class="text-2xl font-bold mb-6">Your Learning Path</h3>
+                    
+                    <div class="space-y-4">
+                        <!-- @MAP: course levels -->
+                        <!-- Beginner Level -->
+                        <div class="bg-card rounded-xl border border-border p-6 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 bg-secondary/20 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-check text-secondary text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-lg font-semibold">Beginner Level</h4>
+                                        <p class="text-muted-foreground">Java basics, syntax, data types</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-sm font-medium mb-2">
+                                        Completed
+                                    </div>
+                                    <div class="text-sm text-muted-foreground">8/8 modules</div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="text-center p-3 bg-secondary/10 rounded-lg">
+                                    <i class="fas fa-check-circle text-secondary mb-1"></i>
+                                    <div class="text-xs font-medium">Variables</div>
+                                </div>
+                                <div class="text-center p-3 bg-secondary/10 rounded-lg">
+                                    <i class="fas fa-check-circle text-secondary mb-1"></i>
+                                    <div class="text-xs font-medium">Data Types</div>
+                                </div>
+                                <div class="text-center p-3 bg-secondary/10 rounded-lg">
+                                    <i class="fas fa-check-circle text-secondary mb-1"></i>
+                                    <div class="text-xs font-medium">Operators</div>
+                                </div>
+                                <div class="text-center p-3 bg-secondary/10 rounded-lg">
+                                    <i class="fas fa-check-circle text-secondary mb-1"></i>
+                                    <div class="text-xs font-medium">Control Flow</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Intermediate Level -->
+                        <div class="bg-card rounded-xl border border-primary/20 p-6 shadow-sm ring-2 ring-primary/10">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-play text-primary text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-lg font-semibold">Intermediate Level</h4>
+                                        <p class="text-muted-foreground">OOP, Collections, Exception Handling</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="bg-accent/20 text-accent-foreground px-3 py-1 rounded-full text-sm font-medium mb-2">
+                                        In Progress
+                                    </div>
+                                    <div class="text-sm text-muted-foreground">5/8 modules</div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <div class="text-center p-3 bg-secondary/10 rounded-lg">
+                                    <i class="fas fa-check-circle text-secondary mb-1"></i>
+                                    <div class="text-xs font-medium">Classes</div>
+                                </div>
+                                <div class="text-center p-3 bg-secondary/10 rounded-lg">
+                                    <i class="fas fa-check-circle text-secondary mb-1"></i>
+                                    <div class="text-xs font-medium">Objects</div>
+                                </div>
+                                <div class="text-center p-3 bg-primary/10 rounded-lg">
+                                    <i class="fas fa-play-circle text-primary mb-1"></i>
+                                    <div class="text-xs font-medium">Inheritance</div>
+                                </div>
+                                <div class="text-center p-3 bg-muted/50 rounded-lg opacity-60">
+                                    <i class="fas fa-lock text-muted-foreground mb-1"></i>
+                                    <div class="text-xs font-medium">Polymorphism</div>
+                                </div>
+                            </div>
+                            
+                            <div class="w-full bg-muted rounded-full h-2">
+                                <div class="bg-gradient-to-r from-primary to-blue-500 h-2 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Level -->
+                        <div class="bg-card rounded-xl border border-border p-6 shadow-sm opacity-75">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-lock text-muted-foreground text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-lg font-semibold text-muted-foreground">Advanced Level</h4>
+                                        <p class="text-muted-foreground">Multithreading, JDBC, Spring Boot</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="bg-muted px-3 py-1 rounded-full text-sm font-medium mb-2">
+                                        Locked
+                                    </div>
+                                    <div class="text-sm text-muted-foreground">0/10 modules</div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center py-8">
+                                <i class="fas fa-trophy text-4xl text-muted-foreground/50 mb-3"></i>
+                                <p class="text-muted-foreground">Complete Intermediate level to unlock</p>
+                            </div>
+                        </div>
+                        <!-- @END_MAP -->
+                    </div>
+                </section>
+                <!-- @END_COMPONENT: CourseStructure -->
+            </div>
+
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- @COMPONENT: AchievementsSidebar [badges and progress] -->
+                <div class="bg-card rounded-xl border border-border p-6 shadow-sm">
+                    <h4 class="text-lg font-semibold mb-4">Recent Achievements</h4>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
+                                <i class="fas fa-fire text-accent"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-sm">7-Day Streak!</div>
+                                <div class="text-xs text-muted-foreground">Keep it up!</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-secondary/20 rounded-full flex items-center justify-center">
+                                <i class="fas fa-code text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-sm">First Program</div>
+                                <div class="text-xs text-muted-foreground">Hello World completed</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                                <i class="fas fa-graduation-cap text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-sm">Beginner Master</div>
+                                <div class="text-xs text-muted-foreground">Level 1 completed</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="w-full mt-4 text-primary hover:bg-primary/10 py-2 rounded-lg transition-colors text-sm font-medium">
+                        View All Badges
+                    </button>
+                </div>
+                <!-- @END_COMPONENT: AchievementsSidebar -->
+
+                <!-- @COMPONENT: LeaderboardSidebar [competitive element] -->
+                <div class="bg-card rounded-xl border border-border p-6 shadow-sm">
+                    <h4 class="text-lg font-semibold mb-4">Leaderboard</h4>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-bold">1</span>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-sm">Rahul Sharma</div>
+                                    <div class="text-xs text-muted-foreground">2,450 XP</div>
+                                </div>
+                            </div>
+                            <i class="fas fa-trophy text-accent"></i>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-bold">2</span>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-sm">Priya Singh</div>
+                                    <div class="text-xs text-muted-foreground">1,890 XP</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between bg-primary/10 p-2 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-bold">3</span>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-sm">You</div>
+                                    <div class="text-xs text-muted-foreground">1,250 XP</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="w-full mt-4 text-primary hover:bg-primary/10 py-2 rounded-lg transition-colors text-sm font-medium">
+                        View Full Leaderboard
+                    </button>
+                </div>
+                <!-- @END_COMPONENT: LeaderboardSidebar -->
+
+                <!-- @COMPONENT: UpgradeCard [course tiers] -->
+                <div class="bg-gradient-to-br from-accent/20 to-orange-100 rounded-xl border border-accent/30 p-6">
+                    <div class="text-center">
+                        <i class="fas fa-crown text-accent text-2xl mb-3"></i>
+                        <h4 class="text-lg font-semibold mb-2">Upgrade to Premium</h4>
+                        <p class="text-sm text-muted-foreground mb-4">
+                            Unlock advanced courses, certificates, and 1-on-1 mentorship
+                        </p>
+                        
+                        <div class="space-y-2 mb-4 text-left">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fas fa-check text-secondary"></i>
+                                <span>Live doubt clearing sessions</span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fas fa-check text-secondary"></i>
+                                <span>Verified certificates</span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-sm">
+                                <i class="fas fa-check text-secondary"></i>
+                                <span>Advanced practice problems</span>
+                            </div>
+                        </div>
+                        
+                        <button class="w-full bg-accent hover:bg-accent/90 text-accent-foreground py-2 rounded-lg font-medium transition-colors">
+                            Upgrade Now - ₹2999
+                        </button>
+                        
+                        <div class="text-xs text-muted-foreground mt-2">
+                            7-day free trial • Cancel anytime
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: UpgradeCard -->
+
+                <!-- @COMPONENT: CertificatePreview [achievement showcase] -->
+                <div class="bg-card rounded-xl border border-border p-6 shadow-sm">
+                    <h4 class="text-lg font-semibold mb-4">Your Certificates</h4>
+                    
+                    <div class="text-center py-8">
+                        <i class="fas fa-certificate text-4xl text-muted-foreground/50 mb-3"></i>
+                        <p class="text-muted-foreground text-sm mb-4">
+                            Complete your first course to earn your certificate
+                        </p>
+                        
+                        <div class="bg-muted/50 rounded-lg p-4 mb-4">
+                            <div class="text-xs text-muted-foreground mb-2">Preview Certificate</div>
+                            <div class="border-2 border-dashed border-muted-foreground/30 rounded p-4">
+                                <div class="text-xs font-bold text-center">Java Fundamentals</div>
+                                <div class="text-xs text-center mt-1">Certificate of Completion</div>
+                                <div class="text-xs text-center text-muted-foreground mt-2">
+                                    Issued to: Your Name
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-xs text-muted-foreground">
+                            Certificates are verified with unique ID
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: CertificatePreview -->
+            </div>
+        </div>
+
+        <!-- @COMPONENT: QuickAccessToolbar [floating action buttons] -->
+        <div class="fixed bottom-6 right-6 flex flex-col space-y-3">
+            <button class="w-12 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110">
+                <i class="fas fa-comments"></i>
+            </button>
+            <button class="w-12 h-12 bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110">
+                <i class="fas fa-question"></i>
+            </button>
+        </div>
+        <!-- @END_COMPONENT: QuickAccessToolbar -->
+    </div>
+
+    <script>
+        // TODO: Implement business logic, API calls, or state management
+        
+        // Mock interactive functionality for demo purposes
+        (function() {
+            // Simulated progress updates
+            const progressBars = document.querySelectorAll('[style*="width"]');
+            
+            // Mock code execution
+            const runCodeButton = document.querySelector('button:contains("Run Code")');
+            
+            // TODO: Integrate with Judge0 API for real code compilation
+            // TODO: Implement MongoDB connection for user data persistence
+            // TODO: Add authentication with JWT tokens
+            // TODO: Implement XP calculation and badge system
+            // TODO: Add real-time progress tracking
+            // TODO: Integrate payment gateway (Razorpay)
+            
+            console.log('DigitioHub Academy platform initialized');
+            console.log('MongoDB URL configured for data persistence');
+        })();
+    </script>
+</body>
+</html>

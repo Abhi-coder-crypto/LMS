@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+// import { setupAuth, isAuthenticated } from "./replitAuth"; // DISABLED
 import { judge0Service } from "./services/judge0";
 import { certificateService } from "./services/certificate";
 import { 
@@ -12,16 +12,27 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Simple middleware to replace isAuthenticated for development
+const mockAuth = (req: any, res: any, next: any) => {
+  // Mock user for development - you can customize this
+  req.user = {
+    claims: {
+      sub: "dev-user-123" // Mock user ID
+    }
+  };
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Auth middleware - DISABLED
+  // await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      res.json(user);
+      res.json(user || { id: userId, username: "dev-user", email: "dev@example.com" });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -29,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard data
-  app.get('/api/dashboard', isAuthenticated, async (req: any, res) => {
+  app.get('/api/dashboard', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
@@ -42,14 +53,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
 
       // Get current course progress
-      const currentCourse = courses.find(course => {
-        const courseProgress = userProgress.filter(p => p.courseId === course.id);
+      const currentCourse = courses.find((course: { id: string; totalModules: any; }) => {
+        const courseProgress = userProgress.filter((p: { courseId: string; }) => p.courseId === course.id);
         const modules = storage.getModulesByCourse(course.id);
         return courseProgress.length > 0 && courseProgress.length < (course.totalModules || 0);
       });
 
       res.json({
-        user,
+        user: user || { id: userId, username: "dev-user", email: "dev@example.com" },
         courses,
         currentCourse,
         userProgress,
@@ -88,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/courses', isAuthenticated, async (req, res) => {
+  app.post('/api/courses', mockAuth, async (req, res) => {
     try {
       const courseData = insertCourseSchema.parse(req.body);
       const course = await storage.createCourse(courseData);
@@ -125,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/modules', isAuthenticated, async (req, res) => {
+  app.post('/api/modules', mockAuth, async (req, res) => {
     try {
       const moduleData = insertModuleSchema.parse(req.body);
       const module = await storage.createModule(moduleData);
@@ -137,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task routes
-  app.get('/api/modules/:moduleId/tasks', isAuthenticated, async (req: any, res) => {
+  app.get('/api/modules/:moduleId/tasks', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const tasks = await storage.getTasksByModule(req.params.moduleId);
@@ -164,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/tasks/:id', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const task = await storage.getTask(req.params.id);
@@ -193,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/tasks', isAuthenticated, async (req, res) => {
+  app.post('/api/tasks', mockAuth, async (req, res) => {
     try {
       const taskData = insertTaskSchema.parse(req.body);
       const task = await storage.createTask(taskData);
@@ -205,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submission routes
-  app.post('/api/tasks/:taskId/submit', isAuthenticated, async (req: any, res) => {
+  app.post('/api/tasks/:taskId/submit', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const taskId = req.params.taskId;
@@ -293,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress routes
-  app.get('/api/progress', isAuthenticated, async (req: any, res) => {
+  app.get('/api/progress', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const progress = await storage.getUserProgress(userId);
@@ -315,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/achievements/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/achievements/user', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const userAchievements = await storage.getUserAchievements(userId);
@@ -339,7 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Certificate routes
-  app.post('/api/certificates/generate/:courseId', isAuthenticated, async (req: any, res) => {
+  app.post('/api/certificates/generate/:courseId', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const courseId = req.params.courseId;
@@ -352,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/certificates/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/certificates/user', mockAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const certificates = await storage.getUserCertificates(userId);
