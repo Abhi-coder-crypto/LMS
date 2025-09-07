@@ -8,41 +8,214 @@ import {
   insertSubmissionSchema,
   insertCourseSchema,
   insertModuleSchema,
-  insertTaskSchema 
+  insertTaskSchema,
+  loginSchema,
+  registerSchema
 } from "@shared/schema";
 import { z } from "zod";
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 
-// Simple middleware to replace isAuthenticated for development
-const mockAuth = (req: any, res: any, next: any) => {
-  // Mock user for development - you can customize this
-  req.user = {
-    claims: {
-      sub: "dev-user-123" // Mock user ID
-    }
-  };
+// Authentication middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  req.userId = req.session.userId;
   next();
 };
 
+// Admin middleware
+const requireAdmin = async (req: any, res: any, next: any) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  
+  try {
+    const user = await storage.getUser(req.session.userId);
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    req.userId = req.session.userId;
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware - DISABLED
-  // await setupAuth(app);
+  // Session configuration
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: 'sessions'
+    }),
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
 
   // Auth routes
-  app.get('/api/auth/user', mockAuth, async (req: any, res) => {
+  app.post('/api/auth/register', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user || { id: userId, username: "dev-user", email: "dev@example.com" });
+      const userData = registerSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      
+      // Create session
+      req.session.userId = user.id;
+      
+      res.status(201).json({ 
+        message: 'Registration successful', 
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          xp: user.xp
+        }
+      });
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      console.error('Registration error:', error);
+      if (error instanceof Error && error.message.includes('already exists')) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: 'Registration failed' });
+      }
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const loginData = loginSchema.parse(req.body);
+      const user = await storage.authenticateUser(loginData);
+      
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      
+      // Create session
+      req.session.userId = user.id;
+      
+      res.json({ 
+        message: 'Login successful', 
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          xp: user.xp
+        }
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(400).json({ message: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Logout failed' });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Logout successful' });
+    });
+  });
+
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        xp: user.xp,
+        streak: user.streak
+      });
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ message: 'Failed to fetch user' });
+    }
+  });
+
+  // Admin registration route (for creating admin accounts)
+  app.post('/api/auth/admin/register', requireAdmin, async (req, res) => {
+    try {
+      const userData = registerSchema.parse({ ...req.body, role: 'admin' });
+      const user = await storage.createUser(userData);
+      
+      res.status(201).json({ 
+        message: 'Admin registration successful', 
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error('Admin registration error:', error);
+      if (error instanceof Error && error.message.includes('already exists')) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: 'Admin registration failed' });
+      }
+    }
+  });
+
+  // Route to create first admin (only if no admins exist)
+  app.post('/api/auth/setup-admin', async (req, res) => {
+    try {
+      // Check if any admin users exist
+      const existingAdmin = await storage.getUserByEmail('admin@digitiohub.com');
+      if (existingAdmin) {
+        return res.status(400).json({ message: 'Admin setup already completed' });
+      }
+
+      const adminData = registerSchema.parse({
+        email: 'admin@digitiohub.com',
+        password: 'admin123456', // Should be changed after first login
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'admin'
+      });
+      
+      const admin = await storage.createUser(adminData);
+      
+      res.status(201).json({ 
+        message: 'Admin setup successful. Please change the default password.', 
+        admin: {
+          id: admin.id,
+          email: admin.email,
+          firstName: admin.firstName,
+          lastName: admin.lastName,
+          role: admin.role
+        }
+      });
+    } catch (error) {
+      console.error('Admin setup error:', error);
+      res.status(400).json({ message: 'Admin setup failed' });
     }
   });
 
   // Dashboard data
-  app.get('/api/dashboard', mockAuth, async (req: any, res) => {
+  app.get('/api/dashboard', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       
       const [user, courses, userProgress, userAchievements, certificates] = await Promise.all([
         storage.getUser(userId),
@@ -60,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json({
-        user: user || { id: userId, username: "dev-user", email: "dev@example.com" },
+        user,
         courses,
         currentCourse,
         userProgress,
@@ -99,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/courses', mockAuth, async (req, res) => {
+  app.post('/api/courses', requireAdmin, async (req, res) => {
     try {
       const courseData = insertCourseSchema.parse(req.body);
       const course = await storage.createCourse(courseData);
@@ -136,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/modules', mockAuth, async (req, res) => {
+  app.post('/api/modules', requireAdmin, async (req, res) => {
     try {
       const moduleData = insertModuleSchema.parse(req.body);
       const module = await storage.createModule(moduleData);
@@ -148,9 +321,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task routes
-  app.get('/api/modules/:moduleId/tasks', mockAuth, async (req: any, res) => {
+  app.get('/api/modules/:moduleId/tasks', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const tasks = await storage.getTasksByModule(req.params.moduleId);
       
       // Check which tasks are unlocked for the user
@@ -175,9 +348,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/tasks/:id', mockAuth, async (req: any, res) => {
+  app.get('/api/tasks/:id', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const task = await storage.getTask(req.params.id);
       
       if (!task) {
@@ -204,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/tasks', mockAuth, async (req, res) => {
+  app.post('/api/tasks', requireAdmin, async (req, res) => {
     try {
       const taskData = insertTaskSchema.parse(req.body);
       const task = await storage.createTask(taskData);
@@ -216,9 +389,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submission routes
-  app.post('/api/tasks/:taskId/submit', mockAuth, async (req: any, res) => {
+  app.post('/api/tasks/:taskId/submit', requireAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const taskId = req.params.taskId;
       
       const submissionData = insertSubmissionSchema.parse({
@@ -304,9 +477,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress routes
-  app.get('/api/progress', mockAuth, async (req: any, res) => {
+  app.get('/api/progress', requireAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const progress = await storage.getUserProgress(userId);
       res.json(progress);
     } catch (error) {
@@ -326,9 +499,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/achievements/user', mockAuth, async (req: any, res) => {
+  app.get('/api/achievements/user', requireAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const userAchievements = await storage.getUserAchievements(userId);
       res.json(userAchievements);
     } catch (error) {
@@ -350,9 +523,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Certificate routes
-  app.post('/api/certificates/generate/:courseId', mockAuth, async (req: any, res) => {
+  app.post('/api/certificates/generate/:courseId', requireAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const courseId = req.params.courseId;
       
       const certificateNumber = await certificateService.generateCertificate(userId, courseId);
@@ -363,9 +536,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/certificates/user', mockAuth, async (req: any, res) => {
+  app.get('/api/certificates/user', requireAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.userId;
       const certificates = await storage.getUserCertificates(userId);
       res.json(certificates);
     } catch (error) {

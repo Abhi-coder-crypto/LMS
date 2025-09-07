@@ -19,12 +19,18 @@ import {
   type ModuleDocument,
   type TaskDocument,
   type SubmissionDocument,
+  type LoginData,
+  type RegisterData,
 } from "../shared/schema"
 import mongoose from "./db";
+import bcrypt from 'bcryptjs';
 
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<UserDocument | null>;
+  getUserByEmail(email: string): Promise<UserDocument | null>;
+  createUser(userData: RegisterData): Promise<UserDocument>;
+  authenticateUser(loginData: LoginData): Promise<UserDocument | null>;
   upsertUser(user: UpsertUser): Promise<UserDocument>;
   updateUserXP(userId: string, xp: number): Promise<void>;
   updateUserStreak(userId: string, streak: number): Promise<void>;
@@ -75,7 +81,63 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<UserDocument | null> {
-    return await User.findById(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return null;
+    }
+    return await User.findById(id).select('-password');
+  }
+
+  async getUserByEmail(email: string): Promise<UserDocument | null> {
+    return await User.findOne({ email });
+  }
+
+  async createUser(userData: RegisterData): Promise<UserDocument> {
+    // Check if user already exists
+    const existingUser = await this.getUserByEmail(userData.email);
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+
+    // Create user
+    const user = new User({
+      ...userData,
+      password: hashedPassword,
+      role: userData.role || 'student'
+    });
+
+    const savedUser = await user.save();
+    
+    // Return user without password
+    const userObject = savedUser.toObject();
+    delete userObject.password;
+    return userObject as UserDocument;
+  }
+
+  async authenticateUser(loginData: LoginData): Promise<UserDocument | null> {
+    // Find user by email
+    const user = await this.getUserByEmail(loginData.email);
+    if (!user) {
+      return null;
+    }
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(loginData.password, user.password);
+    if (!isValidPassword) {
+      return null;
+    }
+
+    // Update last login date
+    user.lastLoginDate = new Date();
+    await user.save();
+
+    // Return user without password
+    const userObject = user.toObject();
+    delete userObject.password;
+    return userObject as UserDocument;
   }
 
   async upsertUser(userData: UpsertUser): Promise<UserDocument> {
@@ -88,6 +150,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserXP(userId: string, xp: number): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error('Invalid user ID');
+    }
     await User.findByIdAndUpdate(userId, {
       $inc: { xp },
       updatedAt: new Date()
@@ -95,6 +160,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserStreak(userId: string, streak: number): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error('Invalid user ID');
+    }
     await User.findByIdAndUpdate(userId, {
       streak,
       lastLoginDate: new Date(),
@@ -192,8 +260,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSubmissionsByUser(userId: string, taskId?: string): Promise<SubmissionDocument[]> {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return [];
+    }
     const filter: any = { userId: new mongoose.Types.ObjectId(userId) };
-    if (taskId) {
+    if (taskId && mongoose.Types.ObjectId.isValid(taskId)) {
       filter.taskId = new mongoose.Types.ObjectId(taskId);
     }
     
@@ -202,6 +273,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestSubmission(userId: string, taskId: string): Promise<SubmissionDocument | null> {
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(taskId)) {
+      return null;
+    }
     return await Submission.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       taskId: new mongoose.Types.ObjectId(taskId)
@@ -210,12 +284,18 @@ export class DatabaseStorage implements IStorage {
 
   // Progress operations
   async getUserProgress(userId: string): Promise<any[]> {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return [];
+    }
     return await UserProgress.find({ 
       userId: new mongoose.Types.ObjectId(userId) 
     });
   }
 
   async getUserCourseProgress(userId: string, courseId: string): Promise<any[]> {
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return [];
+    }
     return await UserProgress.find({
       userId: new mongoose.Types.ObjectId(userId),
       courseId: new mongoose.Types.ObjectId(courseId)
@@ -277,6 +357,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserAchievements(userId: string): Promise<any[]> {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return [];
+    }
     return await UserAchievement.find({ 
       userId: new mongoose.Types.ObjectId(userId) 
     })
@@ -315,6 +398,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserCertificates(userId: string): Promise<any[]> {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return [];
+    }
     return await Certificate.find({ 
       userId: new mongoose.Types.ObjectId(userId) 
     })

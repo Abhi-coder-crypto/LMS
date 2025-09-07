@@ -14,13 +14,16 @@ sessionSchema.index({ expire: 1 });
 
 // User schema
 const userSchema = new mongoose.Schema({
-  email: { type: String, unique: true, sparse: true },
-  firstName: String,
-  lastName: String,
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
   profileImageUrl: String,
+  role: { type: String, enum: ['student', 'admin'], default: 'student' },
   xp: { type: Number, default: 0 },
   streak: { type: Number, default: 0 },
   lastLoginDate: Date,
+  isActive: { type: Boolean, default: true },
 }, {
   timestamps: true
 });
@@ -208,13 +211,28 @@ export const Certificate = mongoose.model('Certificate', certificateSchema);
 
 // Zod schemas for validation
 export const insertUserSchema = z.object({
-  email: z.string().email().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
+  email: z.string().email(),
+  password: z.string().min(6),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
   profileImageUrl: z.string().url().optional(),
+  role: z.enum(['student', 'admin']).optional(),
   xp: z.number().min(0).optional(),
   streak: z.number().min(0).optional(),
   lastLoginDate: z.date().optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  role: z.enum(['student', 'admin']).optional(),
 });
 
 export const insertCourseSchema = z.object({
@@ -306,6 +324,8 @@ export const insertUserProgressSchema = z.object({
 
 // TypeScript types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
+export type LoginData = z.infer<typeof loginSchema>;
+export type RegisterData = z.infer<typeof registerSchema>;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type InsertModule = z.infer<typeof insertModuleSchema>;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
@@ -318,13 +338,16 @@ export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
 
 // Document types (for retrieved documents)
 export type UserDocument = mongoose.Document & {
-  email?: string;
-  firstName?: string;
-  lastName?: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
   profileImageUrl?: string;
+  role: 'student' | 'admin';
   xp: number;
   streak: number;
   lastLoginDate?: Date;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
