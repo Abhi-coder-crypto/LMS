@@ -443,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // If accepted, update progress and award XP
         if (status === 'accepted') {
-          await storage.updateProgress(userId, task.moduleId, task.moduleId, taskId);
+          await storage.updateProgress(userId, task.moduleId.toString(), task.moduleId.toString(), taskId);
           await storage.updateUserXP(userId, task.xpReward || 50);
           
           // Check for achievements

@@ -9,6 +9,7 @@ import Header from '@/components/Header';
 import CourseCard from '@/components/CourseCard';
 import AchievementBadge from '@/components/AchievementBadge';
 import ProgressBar from '@/components/ProgressBar';
+import AdminPanel from '@/pages/AdminPanel';
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -35,9 +36,7 @@ export default function Dashboard() {
         description: "You are logged out. Logging in again...",
         variant: "destructive",
       });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      // User will be automatically redirected to auth by the main App component
       return;
     }
   }, [isAuthenticated, authLoading, toast]);
@@ -60,6 +59,11 @@ export default function Dashboard() {
 
   if (!isAuthenticated || !user) {
     return null;
+  }
+
+  // Route admins to admin panel
+  if (user.role === 'admin') {
+    return <AdminPanel />;
   }
 
   const dashboardInfo = dashboardData || {};
