@@ -10,6 +10,7 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Course from "@/pages/Course";
 import Practice from "@/pages/Practice";
+import Community from "@/pages/Community";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/courses/:id" component={Course} />
       <Route path="/practice" component={Practice} />
+      <Route path="/community" component={Community} />
       <Route component={NotFound} />
     </Switch>
   );

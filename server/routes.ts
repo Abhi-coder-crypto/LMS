@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submission routes
-  app.post('/api/tasks/:taskId/submit', requireAdmin, async (req: any, res) => {
+  app.post('/api/tasks/:taskId/submit', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const taskId = req.params.taskId;
@@ -492,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress routes
-  app.get('/api/progress', requireAdmin, async (req: any, res) => {
+  app.get('/api/progress', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const progress = await storage.getUserProgress(userId);
@@ -514,7 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/achievements/user', requireAdmin, async (req: any, res) => {
+  app.get('/api/achievements/user', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const userAchievements = await storage.getUserAchievements(userId);
@@ -538,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Certificate routes
-  app.post('/api/certificates/generate/:courseId', requireAdmin, async (req: any, res) => {
+  app.post('/api/certificates/generate/:courseId', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const courseId = req.params.courseId;
@@ -551,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/certificates/user', requireAdmin, async (req: any, res) => {
+  app.get('/api/certificates/user', requireAuth, async (req: any, res) => {
     try {
       const userId = req.userId;
       const certificates = await storage.getUserCertificates(userId);

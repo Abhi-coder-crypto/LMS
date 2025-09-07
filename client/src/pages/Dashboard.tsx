@@ -62,19 +62,19 @@ export default function Dashboard() {
   }
 
   // Route admins to admin panel
-  if (user.role === 'admin') {
+  if (user?.role === 'admin') {
     return <AdminPanel />;
   }
 
   const dashboardInfo = dashboardData || {};
-  const courses = dashboardInfo.courses || [];
-  const currentCourse = dashboardInfo.currentCourse || null;
-  const achievements = dashboardInfo.achievements || [];
-  const certificates = dashboardInfo.certificates || [];
+  const courses = (dashboardInfo as any)?.courses || [];
+  const currentCourse = (dashboardInfo as any)?.currentCourse || null;
+  const achievements = (dashboardInfo as any)?.achievements || [];
+  const certificates = (dashboardInfo as any)?.certificates || [];
 
   // Calculate course progress
   const getCourseProgress = (course: any) => {
-    const userProgress = dashboardInfo.userProgress || [];
+    const userProgress = (dashboardInfo as any)?.userProgress || [];
     const courseProgress = userProgress.filter((p: any) => p.courseId === course.id && p.isCompleted);
     return {
       completed: courseProgress.length,
@@ -89,19 +89,31 @@ export default function Dashboard() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-primary to-blue-600 rounded-xl p-6 text-primary-foreground mb-8" data-testid="welcome-banner">
-          <div className="flex items-center justify-between">
+        <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 rounded-2xl p-8 text-white mb-8 overflow-hidden" data-testid="welcome-banner">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-white/10 to-transparent rounded-full -translate-y-48 translate-x-48"></div>
+          <div className="relative z-10 flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold mb-2">
-                Welcome back, {user?.firstName || 'Student'}! 👋
+              <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                Welcome back, {user?.firstName || 'Student'}! 🚀
               </h2>
-              <p className="text-primary-foreground/90">
-                Ready to continue your Java journey? You're doing great!
+              <p className="text-blue-100 text-lg">
+                Ready to master Java programming? Let's build something amazing today!
               </p>
+              <div className="flex items-center gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-orange-300" />
+                  <span className="text-blue-100">Streak: {user?.streak || 0} days</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-300" />
+                  <span className="text-blue-100">{user?.xp || 0} XP earned</span>
+                </div>
+              </div>
             </div>
             <div className="hidden md:block">
-              <div className="w-24 h-24 bg-primary-foreground/20 rounded-full flex items-center justify-center">
-                <Code className="w-12 h-12" />
+              <div className="w-32 h-32 bg-gradient-to-br from-white/20 to-white/5 rounded-3xl flex items-center justify-center backdrop-blur-sm border border-white/20">
+                <Code className="w-16 h-16 text-white" />
               </div>
             </div>
           </div>
@@ -227,7 +239,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {(leaderboard || []).slice(0, 3).map((leader: any, index: number) => (
+                  {(leaderboard || [])?.slice?.(0, 3)?.map((leader: any, index: number) => (
                     <div 
                       key={leader.id} 
                       className={`flex items-center justify-between ${
@@ -243,7 +255,7 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <div className="font-medium text-sm">
-                            {leader.id === user?.id ? 'You' : `${leader.firstName} ${leader.lastName}`}
+                            {leader?.id === user?.id ? 'You' : `${leader?.firstName} ${leader?.lastName}`}
                           </div>
                           <div className="text-xs text-muted-foreground">{leader.xp} XP</div>
                         </div>
@@ -262,35 +274,53 @@ export default function Dashboard() {
             </Card>
 
             {/* Upgrade Card */}
-            <div className="bg-gradient-to-br from-accent/20 to-orange-100 rounded-xl border border-accent/30 p-6" data-testid="upgrade-card">
-              <div className="text-center">
-                <Crown className="w-8 h-8 text-accent mx-auto mb-3" />
-                <h4 className="text-lg font-semibold mb-2">Upgrade to Premium</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Unlock advanced courses, certificates, and 1-on-1 mentorship
+            <div className="relative bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-2xl p-6 text-white overflow-hidden" data-testid="upgrade-card">
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              
+              <div className="relative z-10 text-center">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                  <Crown className="w-6 h-6 text-white" />
+                </div>
+                <h4 className="text-xl font-bold mb-2">Unlock Premium</h4>
+                <p className="text-white/90 text-sm mb-6">
+                  Access advanced courses, live sessions & personalized mentorship
                 </p>
                 
-                <div className="space-y-2 mb-4 text-left">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                <div className="space-y-3 mb-6 text-left">
+                  <div className="flex items-center space-x-3 text-sm">
+                    <div className="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center">
+                      <span className="text-xs">✓</span>
+                    </div>
                     <span>Live doubt clearing sessions</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    <span>Verified certificates</span>
+                  <div className="flex items-center space-x-3 text-sm">
+                    <div className="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center">
+                      <span className="text-xs">✓</span>
+                    </div>
+                    <span>Industry-recognized certificates</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    <span>Advanced practice problems</span>
+                  <div className="flex items-center space-x-3 text-sm">
+                    <div className="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center">
+                      <span className="text-xs">✓</span>
+                    </div>
+                    <span>1-on-1 expert mentorship</span>
+                  </div>
+                  <div className="flex items-center space-x-3 text-sm">
+                    <div className="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center">
+                      <span className="text-xs">✓</span>
+                    </div>
+                    <span>Advanced coding challenges</span>
                   </div>
                 </div>
                 
-                <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" data-testid="button-upgrade">
-                  Upgrade Now - ₹2999
+                <Button className="w-full bg-white text-purple-600 hover:bg-white/90 font-semibold py-3 rounded-xl" data-testid="button-upgrade">
+                  Start Free Trial - ₹2,999/month
                 </Button>
                 
-                <div className="text-xs text-muted-foreground mt-2">
-                  7-day free trial • Cancel anytime
+                <div className="text-xs text-white/70 mt-3">
+                  7-day free trial • Cancel anytime • No hidden fees
                 </div>
               </div>
             </div>
@@ -335,18 +365,19 @@ export default function Dashboard() {
         <div className="fixed bottom-6 right-6 flex flex-col space-y-3" data-testid="quick-access">
           <Button 
             size="icon"
-            className="w-12 h-12 rounded-full shadow-lg hover:scale-110 transition-all"
+            className="w-14 h-14 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
             data-testid="button-community"
+            onClick={() => window.location.href = '/community'}
           >
-            <MessageCircle className="w-5 h-5" />
+            <MessageCircle className="w-6 h-6" />
           </Button>
           <Button 
             size="icon"
             variant="secondary"
-            className="w-12 h-12 rounded-full shadow-lg hover:scale-110 transition-all"
+            className="w-14 h-14 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300 bg-white hover:bg-gray-50 border-2 border-gray-200"
             data-testid="button-help"
           >
-            <HelpCircle className="w-5 h-5" />
+            <HelpCircle className="w-6 h-6 text-gray-600" />
           </Button>
         </div>
       </div>
