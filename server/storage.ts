@@ -157,12 +157,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserXP(userId: string, xp: number): Promise<void> {
-    await db.update(users)
-      .set({ 
-        xp: db.select().from(users).where(eq(users.id, userId)).then(u => (u[0]?.xp || 0) + xp),
-        updatedAt: new Date() 
-      })
-      .where(eq(users.id, userId));
+    // Get current user XP first
+    const currentUser = await this.getUser(userId);
+    if (currentUser) {
+      await db.update(users)
+        .set({ 
+          xp: (currentUser.xp || 0) + xp,
+          updatedAt: new Date() 
+        })
+        .where(eq(users.id, userId));
+    }
   }
 
   async updateUserStreak(userId: string, streak: number): Promise<void> {

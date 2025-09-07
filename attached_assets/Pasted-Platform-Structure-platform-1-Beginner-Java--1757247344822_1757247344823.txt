@@ -1,0 +1,82 @@
+Platform Structure (मूळ बांधणी) 
+हा platform तीन लेवल्समध्ये वभागलेला असेल: 
+1. Beginner – Java चे बेसक concepts, syntax, data types, operators, control statements. 
+2. Intermediate – OOPs concepts (Classes, Objects, Inheritance, Polymorphism), 
+Collections, Exception Handling. 
+3. Advanced – Multi-threading, JDBC, Spring Boot, Design Patterns, Real-world projects. 
+Modes of Learning: 
+Online Tutorials: Pre-recorded videos, PDFs, assignments. 
+Live Sessions: Specific doubt clearing / revision classes. 
+Offline Sessions: Thane station जवळ असलेल्या classroom मध्ये on-demand.
+
+2⃣ Key Features (मुख्य वैशष्ट्ये) 
+Learning Management System (LMS): 
+Student login → courses enroll → progress track. 
+Gamification: 
+Badges (Beginner Badge, Intermediate Badge, etc.), XP points, leaderboards. 
+Community & Mentorship: 
+Discussion forum / WhatsApp + Discord group. 
+Certification: 
+परत्येक level पूण झाल्यावर auto-generated digital certificate. 
+
+3⃣ Course Expansion (भवष्यातील अभ्यासक्रम) 
+Java नंतर या course library मध्ये पुढील वषय जोडता येतील: 
+Python (Data Science, ML Basics) 
+Web Development (HTML, CSS, JS, React) 
+Salesforce (CRM + Apex + LWC Basics) 
+Soft Skills & Interview Preparation  
+
+4⃣ Business Model (उत्पन्न मॉडेल) 
+Beginner Pack (Budget friendly): फक्त Self-paced videos + quizzes. 
+Intermediate Pack: Videos + doubt clearing + assignments checking. 
+Advanced Pack: Videos + live sessions + offline support + certificate. 
+Corporate Training: कंपन्यांसाठी fresher training packages. 
+
+5⃣ Marketing Strategy (प्रचार योजना) 
+Website Integration: DigitioHub official website वर “Academy Section”. 
+Social Media: Reels/Shorts – “30 sec Java tips”, testimonials. 
+Workshops: Free demo sessions → funnel into paid courses. 
+College Tie-ups: Final year students + placement prep batches.
+
+6⃣ Tech Stack (तां त्रक रचना) 
+Frontend: React / Next.js + Tailwind CSS. 
+Backend: Node.js (Express) कंवा Django/FastAPI. 
+Database: PostgreSQL / Firebase for user progress. 
+Video Hosting: Vimeo / YouTube private. 
+Payments: Razorpay (India), Stripe (Global). 
+Certificates: Auto-generated (Canva API / Custom template). 
+
+7⃣ Online Compiler Integration (ऑनलाइन कोड रनर) 
+Judge0 API (Recommended) 
+Free + Open-source. 
+Supports 60+ languages. 
+REST API integration: User code → Judge0 → Output result. 
+इतर पयाय: JDoodle API, Sphere Engine, HackerEarth Assessments. 
+
+8⃣ Task & Auto-Grading Logic (Task Based Unlock System) 
+परत्येक lesson मध्ये code tasks असतील. 
+Student ने code लहून submit केल्यावर → Online Compiler testcases run करेल. 
+Pass Rule: 
+Must pass mandatory hidden testcases. 
+Minimum 80% testcases pass झाले पाहजेत. 
+जर fail झाले तर hints + retries (cooldown सह). 
+Successfully pass झाल्यावरच पुढचा module unlock होईल. 
+
+9⃣ Architecture (सस्टम आकटेक्चर) 
+1. Frontend (React + Monaco Editor): User-friendly IDE experience. 
+2. Backend (Node/Express / Django): Business logic + API calls. 
+3. Online Compiler (Judge0): Code execution sandbox. 
+4. Database (Postgres): Users, Courses, Submissions, Progress. 
+5. Queue System (BullMQ/Celery): Heavy code submissions handle करण्यासाठी. 
+
+ Testcases & Anti-Cheat (गुणवत्ता नयंत्रण) 
+Public Testcases: Student ला दसतील. 
+Hidden Testcases: Student ला दसणार नाहीत (cheating टाळण्यासाठी). 
+Edge Cases: Large inputs, zero inputs, invalid inputs. 
+Performance Cases: Time + memory limit check. 
+Plagiarism Check: Code similarity check (MOSS-like). 
+Randomized Testcases: प्रत्येक attempt ला वेगळे hidden cases. 
+1⃣1⃣ Certificates & Verification (प्रमाणपत्र) 
+Auto-issued certificate only if student passes final module. 
+Each certificate ला unique ID + public verification link. 
+Leaderboard + XP system to motivate students. 
