@@ -1,27 +1,29 @@
-// server/db.ts
-import mongoose from 'mongoose';
-import 'dotenv/config';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import * as schema from '../shared/schema';
 
-if (!process.env.MONGODB_URI) {
+if (!process.env.DATABASE_URL) {
   throw new Error(
-    "MONGODB_URI must be set. Did you forget to add your MongoDB connection string?",
+    "DATABASE_URL must be set. Did you forget to add your PostgreSQL connection string?",
   );
 }
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI);
-
-// Connection event listeners
-mongoose.connection.on('connected', () => {
-  console.log('Connected to MongoDB');
+// Create PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
+// Create Drizzle database instance
+export const db = drizzle(pool, { schema });
+
+// Test the connection
+pool.on('connect', () => {
+  console.log('Connected to PostgreSQL database');
 });
 
-mongoose.connection.on('disconnected', () => {
-  console.log('Disconnected from MongoDB');
+pool.on('error', (err) => {
+  console.error('PostgreSQL connection error:', err);
 });
 
-export default mongoose;
+export default db;

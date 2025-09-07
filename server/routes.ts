@@ -14,7 +14,15 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import session from 'express-session';
-import MongoStore from 'connect-mongo';
+import pgSession from 'connect-pg-simple';
+import { Pool } from 'pg';
+
+// Extend session data type
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+  }
+}
 
 // Authentication middleware
 const requireAuth = (req: any, res: any, next: any) => {
@@ -45,14 +53,22 @@ const requireAdmin = async (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // PostgreSQL session store
+  const PgSession = pgSession(session);
+  const pgPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  });
+
   // Session configuration
   app.use(session({
     secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI,
-      collectionName: 'sessions'
+    store: new PgSession({
+      pool: pgPool,
+      tableName: 'sessions',
+      createTableIfMissing: true
     }),
     cookie: {
       secure: process.env.NODE_ENV === 'production',
@@ -68,12 +84,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser(userData);
       
       // Create session
-      req.session.userId = user._id.toString();
+      req.session.userId = user.id;
       
       res.status(201).json({ 
         message: 'Registration successful', 
         user: {
-          id: user._id.toString(),
+          id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -101,12 +117,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create session
-      req.session.userId = user._id.toString();
+      req.session.userId = user.id;
       
       res.json({ 
         message: 'Login successful', 
         user: {
-          id: user._id.toString(),
+          id: user.id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -137,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
       res.json({
-        id: user._id.toString(),
+        id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -226,9 +242,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
 
       // Get current course progress
-      const currentCourse = courses.find((course: { id: string; totalModules: any; }) => {
-        const courseProgress = userProgress.filter((p: { courseId: string; }) => p.courseId === course.id);
-        const modules = storage.getModulesByCourse(course.id);
+      const currentCourse = courses.find((course) => {
+        const courseProgress = userProgress.filter((p) => p.courseId === course.id);
         return courseProgress.length > 0 && courseProgress.length < (course.totalModules || 0);
       });
 

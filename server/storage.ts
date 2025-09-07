@@ -1,97 +1,117 @@
+import { eq, and, desc, asc } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
+import { db } from './db';
 import {
-  User,
-  Course,
-  Module,
-  Task,
-  TestCase,
-  Submission,
-  UserProgress,
-  Achievement,
-  UserAchievement,
-  Certificate,
-  type UpsertUser,
+  users,
+  courses,
+  modules,
+  tasks,
+  testCases,
+  submissions,
+  userProgress,
+  achievements,
+  userAchievements,
+  certificates,
+  type User,
+  type NewUser,
+  type Course,
+  type NewCourse,
+  type Module,
+  type NewModule,
+  type Task,
+  type NewTask,
+  type TestCase,
+  type NewTestCase,
+  type Submission,
+  type NewSubmission,
+  type UserProgress,
+  type NewUserProgress,
+  type Achievement,
+  type UserAchievement,
+  type Certificate,
+  type LoginData,
+  type RegisterData,
   type InsertCourse,
   type InsertModule,
   type InsertTask,
   type InsertSubmission,
-  type UserDocument,
-  type CourseDocument,
-  type ModuleDocument,
-  type TaskDocument,
-  type SubmissionDocument,
-  type LoginData,
-  type RegisterData,
-} from "../shared/schema"
-import mongoose from "./db";
-import bcrypt from 'bcryptjs';
+} from '@shared/schema';
 
 export interface IStorage {
   // User operations
-  getUser(id: string): Promise<UserDocument | null>;
-  getUserByEmail(email: string): Promise<UserDocument | null>;
-  createUser(userData: RegisterData): Promise<UserDocument>;
-  authenticateUser(loginData: LoginData): Promise<UserDocument | null>;
-  upsertUser(user: UpsertUser): Promise<UserDocument>;
+  getUser(id: string): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
+  createUser(userData: RegisterData): Promise<User>;
+  authenticateUser(loginData: LoginData): Promise<User | null>;
   updateUserXP(userId: string, xp: number): Promise<void>;
   updateUserStreak(userId: string, streak: number): Promise<void>;
-  getLeaderboard(limit?: number): Promise<UserDocument[]>;
+  getLeaderboard(limit?: number): Promise<User[]>;
 
   // Course operations
-  getCourses(): Promise<CourseDocument[]>;
-  getCourse(id: string): Promise<CourseDocument | null>;
-  createCourse(course: InsertCourse): Promise<CourseDocument>;
+  getCourses(): Promise<Course[]>;
+  getCourse(id: string): Promise<Course | null>;
+  createCourse(course: InsertCourse): Promise<Course>;
 
   // Module operations
-  getModulesByCourse(courseId: string): Promise<ModuleDocument[]>;
-  getModule(id: string): Promise<ModuleDocument | null>;
-  createModule(module: InsertModule): Promise<ModuleDocument>;
+  getModulesByCourse(courseId: string): Promise<Module[]>;
+  getModule(id: string): Promise<Module | null>;
+  createModule(module: InsertModule): Promise<Module>;
 
   // Task operations
-  getTasksByModule(moduleId: string): Promise<TaskDocument[]>;
-  getTask(id: string): Promise<TaskDocument | null>;
-  createTask(task: InsertTask): Promise<TaskDocument>;
+  getTasksByModule(moduleId: string): Promise<Task[]>;
+  getTask(id: string): Promise<Task | null>;
+  createTask(task: InsertTask): Promise<Task>;
 
   // Test case operations
-  getTestCasesByTask(taskId: string): Promise<any[]>;
-  getPublicTestCases(taskId: string): Promise<any[]>;
+  getTestCasesByTask(taskId: string): Promise<TestCase[]>;
+  getPublicTestCases(taskId: string): Promise<TestCase[]>;
 
   // Submission operations
-  createSubmission(submission: InsertSubmission): Promise<SubmissionDocument>;
-  updateSubmission(id: string, updates: Partial<any>): Promise<void>;
-  getSubmissionsByUser(userId: string, taskId?: string): Promise<SubmissionDocument[]>;
-  getLatestSubmission(userId: string, taskId: string): Promise<SubmissionDocument | null>;
+  createSubmission(submission: InsertSubmission): Promise<Submission>;
+  updateSubmission(id: string, updates: Partial<Submission>): Promise<void>;
+  getSubmissionsByUser(userId: string, taskId?: string): Promise<Submission[]>;
+  getLatestSubmission(userId: string, taskId: string): Promise<Submission | null>;
 
   // Progress operations
-  getUserProgress(userId: string): Promise<any[]>;
-  getUserCourseProgress(userId: string, courseId: string): Promise<any[]>;
+  getUserProgress(userId: string): Promise<UserProgress[]>;
+  getUserCourseProgress(userId: string, courseId: string): Promise<UserProgress[]>;
   updateProgress(userId: string, courseId: string, moduleId?: string, taskId?: string): Promise<void>;
   isTaskUnlocked(userId: string, taskId: string): Promise<boolean>;
 
   // Achievement operations
-  getAchievements(): Promise<any[]>;
-  getUserAchievements(userId: string): Promise<any[]>;
+  getAchievements(): Promise<Achievement[]>;
+  getUserAchievements(userId: string): Promise<UserAchievement[]>;
   unlockAchievement(userId: string, achievementId: string): Promise<void>;
 
   // Certificate operations
-  createCertificate(userId: string, courseId: string): Promise<any>;
-  getUserCertificates(userId: string): Promise<any[]>;
-  verifyCertificate(certificateNumber: string): Promise<any>;
+  createCertificate(userId: string, courseId: string): Promise<Certificate>;
+  getUserCertificates(userId: string): Promise<Certificate[]>;
+  verifyCertificate(certificateNumber: string): Promise<Certificate | null>;
 }
 
 export class DatabaseStorage implements IStorage {
   // User operations
-  async getUser(id: string): Promise<UserDocument | null> {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+  async getUser(id: string): Promise<User | null> {
+    try {
+      const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error getting user:', error);
       return null;
     }
-    return await User.findById(id).select('-password');
   }
 
-  async getUserByEmail(email: string): Promise<UserDocument | null> {
-    return await User.findOne({ email });
+  async getUserByEmail(email: string): Promise<User | null> {
+    try {
+      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      return null;
+    }
   }
 
-  async createUser(userData: RegisterData): Promise<UserDocument> {
+  async createUser(userData: RegisterData): Promise<User> {
     // Check if user already exists
     const existingUser = await this.getUserByEmail(userData.email);
     if (existingUser) {
@@ -103,23 +123,21 @@ export class DatabaseStorage implements IStorage {
     const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
 
     // Create user
-    const user = new User({
+    const newUser: NewUser = {
       ...userData,
       password: hashedPassword,
-      role: userData.role || 'student'
-    });
+      role: userData.role || 'student',
+    };
 
-    const savedUser = await user.save();
-    
-    // Return user without password
-    const userObject = savedUser.toObject();
-    delete userObject.password;
-    return userObject;
+    const result = await db.insert(users).values(newUser).returning();
+    return result[0];
   }
 
-  async authenticateUser(loginData: LoginData): Promise<UserDocument | null> {
-    // Find user by email
-    const user = await this.getUserByEmail(loginData.email);
+  async authenticateUser(loginData: LoginData): Promise<User | null> {
+    // Find user by email (include password for verification)
+    const result = await db.select().from(users).where(eq(users.email, loginData.email)).limit(1);
+    const user = result[0];
+    
     if (!user) {
       return null;
     }
@@ -131,202 +149,190 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Update last login date
-    user.lastLoginDate = new Date();
-    await user.save();
+    await db.update(users)
+      .set({ lastLoginDate: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, user.id));
 
-    // Return user without password
-    const userObject = user.toObject();
-    delete userObject.password;
-    return userObject;
-  }
-
-  async upsertUser(userData: UpsertUser): Promise<UserDocument> {
-    const user = await User.findOneAndUpdate(
-      { email: userData.email },
-      { ...userData, updatedAt: new Date() },
-      { upsert: true, new: true }
-    );
-    return user!;
+    return user;
   }
 
   async updateUserXP(userId: string, xp: number): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      throw new Error('Invalid user ID');
-    }
-    await User.findByIdAndUpdate(userId, {
-      $inc: { xp },
-      updatedAt: new Date()
-    });
+    await db.update(users)
+      .set({ 
+        xp: db.select().from(users).where(eq(users.id, userId)).then(u => (u[0]?.xp || 0) + xp),
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
   }
 
   async updateUserStreak(userId: string, streak: number): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      throw new Error('Invalid user ID');
-    }
-    await User.findByIdAndUpdate(userId, {
-      streak,
-      lastLoginDate: new Date(),
-      updatedAt: new Date()
-    });
+    await db.update(users)
+      .set({ 
+        streak,
+        lastLoginDate: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
   }
 
-  async getLeaderboard(limit = 10): Promise<UserDocument[]> {
-    return await User.find()
-      .sort({ xp: -1 })
+  async getLeaderboard(limit = 10): Promise<User[]> {
+    return await db.select()
+      .from(users)
+      .orderBy(desc(users.xp))
       .limit(limit);
   }
 
   // Course operations
-  async getCourses(): Promise<CourseDocument[]> {
-    return await Course.find({ isActive: true })
-      .sort({ order: 1 });
+  async getCourses(): Promise<Course[]> {
+    return await db.select()
+      .from(courses)
+      .where(eq(courses.isActive, true))
+      .orderBy(asc(courses.order));
   }
 
-  async getCourse(id: string): Promise<CourseDocument | null> {
-    return await Course.findById(id);
+  async getCourse(id: string): Promise<Course | null> {
+    const result = await db.select().from(courses).where(eq(courses.id, id)).limit(1);
+    return result[0] || null;
   }
 
-  async createCourse(course: InsertCourse): Promise<CourseDocument> {
-    const newCourse = new Course(course);
-    return await newCourse.save();
+  async createCourse(course: InsertCourse): Promise<Course> {
+    const result = await db.insert(courses).values(course).returning();
+    return result[0];
   }
 
   // Module operations
-  async getModulesByCourse(courseId: string): Promise<ModuleDocument[]> {
-    return await Module.find({ 
-      courseId: new mongoose.Types.ObjectId(courseId), 
-      isActive: true 
-    }).sort({ order: 1 });
+  async getModulesByCourse(courseId: string): Promise<Module[]> {
+    return await db.select()
+      .from(modules)
+      .where(and(eq(modules.courseId, courseId), eq(modules.isActive, true)))
+      .orderBy(asc(modules.order));
   }
 
-  async getModule(id: string): Promise<ModuleDocument | null> {
-    return await Module.findById(id);
+  async getModule(id: string): Promise<Module | null> {
+    const result = await db.select().from(modules).where(eq(modules.id, id)).limit(1);
+    return result[0] || null;
   }
 
-  async createModule(module: InsertModule): Promise<ModuleDocument> {
-    const newModule = new Module({
-      ...module,
-      courseId: new mongoose.Types.ObjectId(module.courseId)
-    });
-    return await newModule.save();
+  async createModule(module: InsertModule): Promise<Module> {
+    const result = await db.insert(modules).values(module).returning();
+    return result[0];
   }
 
   // Task operations
-  async getTasksByModule(moduleId: string): Promise<TaskDocument[]> {
-    return await Task.find({ 
-      moduleId: new mongoose.Types.ObjectId(moduleId), 
-      isActive: true 
-    }).sort({ order: 1 });
+  async getTasksByModule(moduleId: string): Promise<Task[]> {
+    return await db.select()
+      .from(tasks)
+      .where(and(eq(tasks.moduleId, moduleId), eq(tasks.isActive, true)))
+      .orderBy(asc(tasks.order));
   }
 
-  async getTask(id: string): Promise<TaskDocument | null> {
-    return await Task.findById(id);
+  async getTask(id: string): Promise<Task | null> {
+    const result = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+    return result[0] || null;
   }
 
-  async createTask(task: InsertTask): Promise<TaskDocument> {
-    const newTask = new Task({
-      ...task,
-      moduleId: new mongoose.Types.ObjectId(task.moduleId)
-    });
-    return await newTask.save();
+  async createTask(task: InsertTask): Promise<Task> {
+    const result = await db.insert(tasks).values(task).returning();
+    return result[0];
   }
 
   // Test case operations
-  async getTestCasesByTask(taskId: string): Promise<any[]> {
-    return await TestCase.find({ 
-      taskId: new mongoose.Types.ObjectId(taskId) 
-    }).sort({ order: 1 });
+  async getTestCasesByTask(taskId: string): Promise<TestCase[]> {
+    return await db.select()
+      .from(testCases)
+      .where(eq(testCases.taskId, taskId))
+      .orderBy(asc(testCases.order));
   }
 
-  async getPublicTestCases(taskId: string): Promise<any[]> {
-    return await TestCase.find({ 
-      taskId: new mongoose.Types.ObjectId(taskId), 
-      isHidden: false 
-    }).sort({ order: 1 });
+  async getPublicTestCases(taskId: string): Promise<TestCase[]> {
+    return await db.select()
+      .from(testCases)
+      .where(and(eq(testCases.taskId, taskId), eq(testCases.isHidden, false)))
+      .orderBy(asc(testCases.order));
   }
 
   // Submission operations
-  async createSubmission(submission: InsertSubmission): Promise<SubmissionDocument> {
-    const newSubmission = new Submission({
-      ...submission,
-      userId: new mongoose.Types.ObjectId(submission.userId),
-      taskId: new mongoose.Types.ObjectId(submission.taskId)
-    });
-    return await newSubmission.save();
+  async createSubmission(submission: InsertSubmission): Promise<Submission> {
+    const result = await db.insert(submissions).values(submission).returning();
+    return result[0];
   }
 
-  async updateSubmission(id: string, updates: Partial<any>): Promise<void> {
-    await Submission.findByIdAndUpdate(id, updates);
+  async updateSubmission(id: string, updates: Partial<Submission>): Promise<void> {
+    await db.update(submissions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(submissions.id, id));
   }
 
-  async getSubmissionsByUser(userId: string, taskId?: string): Promise<SubmissionDocument[]> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return [];
-    }
-    const filter: any = { userId: new mongoose.Types.ObjectId(userId) };
-    if (taskId && mongoose.Types.ObjectId.isValid(taskId)) {
-      filter.taskId = new mongoose.Types.ObjectId(taskId);
+  async getSubmissionsByUser(userId: string, taskId?: string): Promise<Submission[]> {
+    const conditions = [eq(submissions.userId, userId)];
+    if (taskId) {
+      conditions.push(eq(submissions.taskId, taskId));
     }
     
-    return await Submission.find(filter)
-      .sort({ createdAt: -1 });
+    return await db.select()
+      .from(submissions)
+      .where(and(...conditions))
+      .orderBy(desc(submissions.createdAt));
   }
 
-  async getLatestSubmission(userId: string, taskId: string): Promise<SubmissionDocument | null> {
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(taskId)) {
-      return null;
-    }
-    return await Submission.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-      taskId: new mongoose.Types.ObjectId(taskId)
-    }).sort({ createdAt: -1 });
+  async getLatestSubmission(userId: string, taskId: string): Promise<Submission | null> {
+    const result = await db.select()
+      .from(submissions)
+      .where(and(eq(submissions.userId, userId), eq(submissions.taskId, taskId)))
+      .orderBy(desc(submissions.createdAt))
+      .limit(1);
+    
+    return result[0] || null;
   }
 
   // Progress operations
-  async getUserProgress(userId: string): Promise<any[]> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return [];
-    }
-    return await UserProgress.find({ 
-      userId: new mongoose.Types.ObjectId(userId) 
-    });
+  async getUserProgress(userId: string): Promise<UserProgress[]> {
+    return await db.select()
+      .from(userProgress)
+      .where(eq(userProgress.userId, userId));
   }
 
-  async getUserCourseProgress(userId: string, courseId: string): Promise<any[]> {
-    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
-      return [];
-    }
-    return await UserProgress.find({
-      userId: new mongoose.Types.ObjectId(userId),
-      courseId: new mongoose.Types.ObjectId(courseId)
-    });
+  async getUserCourseProgress(userId: string, courseId: string): Promise<UserProgress[]> {
+    return await db.select()
+      .from(userProgress)
+      .where(and(eq(userProgress.userId, userId), eq(userProgress.courseId, courseId)));
   }
 
   async updateProgress(userId: string, courseId: string, moduleId?: string, taskId?: string): Promise<void> {
-    const progressData: any = {
-      userId: new mongoose.Types.ObjectId(userId),
-      courseId: new mongoose.Types.ObjectId(courseId),
+    const progressData: NewUserProgress = {
+      userId,
+      courseId,
+      moduleId: moduleId || null,
+      taskId: taskId || null,
       isCompleted: true,
       completedAt: new Date(),
     };
 
+    // Check if progress already exists
+    const conditions = [
+      eq(userProgress.userId, userId),
+      eq(userProgress.courseId, courseId),
+    ];
+    
     if (moduleId) {
-      progressData.moduleId = new mongoose.Types.ObjectId(moduleId);
+      conditions.push(eq(userProgress.moduleId, moduleId));
     }
     if (taskId) {
-      progressData.taskId = new mongoose.Types.ObjectId(taskId);
+      conditions.push(eq(userProgress.taskId, taskId));
     }
 
-    await UserProgress.findOneAndUpdate(
-      {
-        userId: progressData.userId,
-        courseId: progressData.courseId,
-        moduleId: progressData.moduleId || null,
-        taskId: progressData.taskId || null,
-      },
-      progressData,
-      { upsert: true }
-    );
+    const existing = await db.select()
+      .from(userProgress)
+      .where(and(...conditions))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db.update(userProgress)
+        .set({ isCompleted: true, completedAt: new Date(), updatedAt: new Date() })
+        .where(eq(userProgress.id, existing[0].id));
+    } else {
+      await db.insert(userProgress).values(progressData);
+    }
   }
 
   async isTaskUnlocked(userId: string, taskId: string): Promise<boolean> {
@@ -334,84 +340,88 @@ export class DatabaseStorage implements IStorage {
     const task = await this.getTask(taskId);
     if (!task) return false;
 
-    const tasksInModule = await this.getTasksByModule(task.moduleId.toString());
-    const taskIndex = tasksInModule.findIndex(t => t._id.toString() === taskId);
+    const tasksInModule = await this.getTasksByModule(task.moduleId);
+    const taskIndex = tasksInModule.findIndex(t => t.id === taskId);
     
     // First task is always unlocked
     if (taskIndex === 0) return true;
 
     // Check if previous task is completed
     const previousTask = tasksInModule[taskIndex - 1];
-    const progress = await UserProgress.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-      taskId: previousTask._id,
-      isCompleted: true
-    });
+    const progress = await db.select()
+      .from(userProgress)
+      .where(and(
+        eq(userProgress.userId, userId),
+        eq(userProgress.taskId, previousTask.id),
+        eq(userProgress.isCompleted, true)
+      ))
+      .limit(1);
 
-    return !!progress;
+    return progress.length > 0;
   }
 
   // Achievement operations
-  async getAchievements(): Promise<any[]> {
-    return await Achievement.find({ isActive: true });
+  async getAchievements(): Promise<Achievement[]> {
+    return await db.select()
+      .from(achievements)
+      .where(eq(achievements.isActive, true));
   }
 
-  async getUserAchievements(userId: string): Promise<any[]> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return [];
-    }
-    return await UserAchievement.find({ 
-      userId: new mongoose.Types.ObjectId(userId) 
-    })
-    .populate('achievementId')
-    .sort({ unlockedAt: -1 });
+  async getUserAchievements(userId: string): Promise<UserAchievement[]> {
+    return await db.select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId))
+      .orderBy(desc(userAchievements.unlockedAt));
   }
 
   async unlockAchievement(userId: string, achievementId: string): Promise<void> {
-    const existing = await UserAchievement.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-      achievementId: new mongoose.Types.ObjectId(achievementId)
-    });
+    // Check if achievement already unlocked
+    const existing = await db.select()
+      .from(userAchievements)
+      .where(and(
+        eq(userAchievements.userId, userId),
+        eq(userAchievements.achievementId, achievementId)
+      ))
+      .limit(1);
 
-    if (!existing) {
-      const userAchievement = new UserAchievement({
-        userId: new mongoose.Types.ObjectId(userId),
-        achievementId: new mongoose.Types.ObjectId(achievementId)
+    if (existing.length === 0) {
+      await db.insert(userAchievements).values({
+        userId,
+        achievementId,
       });
-      await userAchievement.save();
     }
   }
 
   // Certificate operations
-  async createCertificate(userId: string, courseId: string): Promise<any> {
+  async createCertificate(userId: string, courseId: string): Promise<Certificate> {
     const certificateNumber = `DIGI-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const verificationUrl = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}/verify/${certificateNumber}`;
 
-    const certificate = new Certificate({
-      userId: new mongoose.Types.ObjectId(userId),
-      courseId: new mongoose.Types.ObjectId(courseId),
+    const newCertificate = {
+      userId,
+      courseId,
       certificateNumber,
       verificationUrl,
-    });
+    };
 
-    return await certificate.save();
+    const result = await db.insert(certificates).values(newCertificate).returning();
+    return result[0];
   }
 
-  async getUserCertificates(userId: string): Promise<any[]> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return [];
-    }
-    return await Certificate.find({ 
-      userId: new mongoose.Types.ObjectId(userId) 
-    })
-    .populate('courseId')
-    .sort({ issuedAt: -1 });
+  async getUserCertificates(userId: string): Promise<Certificate[]> {
+    return await db.select()
+      .from(certificates)
+      .where(eq(certificates.userId, userId))
+      .orderBy(desc(certificates.issuedAt));
   }
 
-  async verifyCertificate(certificateNumber: string): Promise<any> {
-    return await Certificate.findOne({ certificateNumber })
-      .populate('userId')
-      .populate('courseId');
+  async verifyCertificate(certificateNumber: string): Promise<Certificate | null> {
+    const result = await db.select()
+      .from(certificates)
+      .where(eq(certificates.certificateNumber, certificateNumber))
+      .limit(1);
+    
+    return result[0] || null;
   }
 }
 

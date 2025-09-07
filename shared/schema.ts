@@ -1,226 +1,181 @@
-import mongoose from 'mongoose';
+import { pgTable, text, integer, boolean, timestamp, varchar, decimal, uuid, index } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-// Session schema for session storage
-const sessionSchema = new mongoose.Schema({
-  sid: { type: String, required: true, unique: true },
-  sess: { type: mongoose.Schema.Types.Mixed, required: true },
-  expire: { type: Date, required: true }
-}, {
-  timestamps: false
+// Users table
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  profileImageUrl: text('profile_image_url'),
+  role: varchar('role', { length: 20 }).notNull().default('student'), // 'student' | 'admin'
+  xp: integer('xp').notNull().default(0),
+  streak: integer('streak').notNull().default(0),
+  lastLoginDate: timestamp('last_login_date'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-sessionSchema.index({ expire: 1 });
+// Courses table
+export const courses = pgTable('courses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  level: varchar('level', { length: 20 }).notNull(), // 'beginner' | 'intermediate' | 'advanced'
+  order: integer('order').notNull(),
+  totalModules: integer('total_modules').notNull().default(0),
+  xpReward: integer('xp_reward').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  orderIdx: index('courses_order_idx').on(table.order),
+}));
 
-// User schema
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  profileImageUrl: String,
-  role: { type: String, enum: ['student', 'admin'], default: 'student' },
-  xp: { type: Number, default: 0 },
-  streak: { type: Number, default: 0 },
-  lastLoginDate: Date,
-  isActive: { type: Boolean, default: true },
-}, {
-  timestamps: true
+// Modules table
+export const modules = pgTable('modules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  courseId: uuid('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  content: text('content'), // HTML content or markdown
+  order: integer('order').notNull(),
+  xpReward: integer('xp_reward').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  courseOrderIdx: index('modules_course_order_idx').on(table.courseId, table.order),
+}));
+
+// Tasks table
+export const tasks = pgTable('tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  moduleId: uuid('module_id').notNull().references(() => modules.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  difficulty: varchar('difficulty', { length: 20 }).notNull(), // 'easy' | 'medium' | 'hard'
+  starterCode: text('starter_code'),
+  solution: text('solution'),
+  xpReward: integer('xp_reward').notNull().default(0),
+  timeLimit: integer('time_limit').notNull().default(30), // seconds
+  memoryLimit: integer('memory_limit').notNull().default(256), // MB
+  order: integer('order').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  moduleOrderIdx: index('tasks_module_order_idx').on(table.moduleId, table.order),
+}));
+
+// Test cases table
+export const testCases = pgTable('test_cases', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: uuid('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  input: text('input'),
+  expectedOutput: text('expected_output'),
+  isHidden: boolean('is_hidden').notNull().default(false),
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  taskOrderIdx: index('test_cases_task_order_idx').on(table.taskId, table.order),
+}));
+
+// User progress table
+export const userProgress = pgTable('user_progress', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  courseId: uuid('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  moduleId: uuid('module_id').references(() => modules.id, { onDelete: 'cascade' }),
+  taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
+  isCompleted: boolean('is_completed').notNull().default(false),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  userCourseIdx: index('user_progress_user_course_idx').on(table.userId, table.courseId),
+  userTaskIdx: index('user_progress_user_task_idx').on(table.userId, table.taskId),
+}));
+
+// Submissions table
+export const submissions = pgTable('submissions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  taskId: uuid('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  language: varchar('language', { length: 50 }).notNull().default('java'),
+  status: varchar('status', { length: 50 }), // accepted, wrong_answer, time_limit_exceeded, etc.
+  executionTime: decimal('execution_time', { precision: 10, scale: 4 }),
+  memoryUsed: integer('memory_used'),
+  testCasesPassed: integer('test_cases_passed').notNull().default(0),
+  totalTestCases: integer('total_test_cases').notNull().default(0),
+  judge0Token: varchar('judge0_token', { length: 255 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  userTaskIdx: index('submissions_user_task_idx').on(table.userId, table.taskId),
+  createdAtIdx: index('submissions_created_at_idx').on(table.createdAt),
+}));
+
+// Achievements table
+export const achievements = pgTable('achievements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 100 }), // Font Awesome icon class
+  xpReward: integer('xp_reward').notNull().default(0),
+  condition: text('condition'), // JSON string describing unlock condition
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Course schema
-const courseSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: String,
-  level: { 
-    type: String, 
-    enum: ['beginner', 'intermediate', 'advanced'], 
-    required: true 
-  },
-  order: { type: Number, required: true },
-  totalModules: { type: Number, default: 0 },
-  xpReward: { type: Number, default: 0 },
-  isActive: { type: Boolean, default: true },
-}, {
-  timestamps: true
-});
+// User achievements table
+export const userAchievements = pgTable('user_achievements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  achievementId: uuid('achievement_id').notNull().references(() => achievements.id, { onDelete: 'cascade' }),
+  unlockedAt: timestamp('unlocked_at').notNull().defaultNow(),
+}, (table) => ({
+  userAchievementUniqueIdx: index('user_achievements_unique_idx').on(table.userId, table.achievementId),
+}));
 
-// Module schema
-const moduleSchema = new mongoose.Schema({
-  courseId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Course', 
-    required: true 
-  },
-  title: { type: String, required: true },
-  description: String,
-  content: String, // HTML content or markdown
-  order: { type: Number, required: true },
-  xpReward: { type: Number, default: 0 },
-  isActive: { type: Boolean, default: true },
-}, {
-  timestamps: true
-});
+// Certificates table
+export const certificates = pgTable('certificates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  courseId: uuid('course_id').notNull().references(() => courses.id, { onDelete: 'cascade' }),
+  certificateNumber: varchar('certificate_number', { length: 255 }).notNull().unique(),
+  issuedAt: timestamp('issued_at').notNull().defaultNow(),
+  verificationUrl: text('verification_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  certificateNumberIdx: index('certificates_number_idx').on(table.certificateNumber),
+}));
 
-// Task schema
-const taskSchema = new mongoose.Schema({
-  moduleId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Module', 
-    required: true 
-  },
-  title: { type: String, required: true },
-  description: String,
-  difficulty: { 
-    type: String, 
-    enum: ['easy', 'medium', 'hard'], 
-    required: true 
-  },
-  starterCode: String,
-  solution: String,
-  xpReward: { type: Number, default: 0 },
-  timeLimit: { type: Number, default: 30 }, // seconds
-  memoryLimit: { type: Number, default: 256 }, // MB
-  order: { type: Number, required: true },
-  isActive: { type: Boolean, default: true },
-}, {
-  timestamps: true
-});
-
-// Test case schema
-const testCaseSchema = new mongoose.Schema({
-  taskId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Task', 
-    required: true 
-  },
-  input: String,
-  expectedOutput: String,
-  isHidden: { type: Boolean, default: false },
-  order: { type: Number, required: true },
-}, {
-  timestamps: true
-});
-
-// User progress schema
-const userProgressSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
-  },
-  courseId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Course', 
-    required: true 
-  },
-  moduleId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Module' 
-  },
-  taskId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Task' 
-  },
-  isCompleted: { type: Boolean, default: false },
-  completedAt: Date,
-}, {
-  timestamps: true
-});
-
-// Submission schema
-const submissionSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
-  },
-  taskId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Task', 
-    required: true 
-  },
-  code: { type: String, required: true },
-  language: { type: String, default: 'java' },
-  status: String, // accepted, wrong_answer, time_limit_exceeded, etc.
-  executionTime: { type: mongoose.Schema.Types.Decimal128 },
-  memoryUsed: Number,
-  testCasesPassed: { type: Number, default: 0 },
-  totalTestCases: { type: Number, default: 0 },
-  judge0Token: String,
-}, {
-  timestamps: true
-});
-
-// Achievement schema
-const achievementSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  icon: String, // Font Awesome icon class
-  xpReward: { type: Number, default: 0 },
-  condition: String, // JSON string describing unlock condition
-  isActive: { type: Boolean, default: true },
-}, {
-  timestamps: true
-});
-
-// User achievement schema
-const userAchievementSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
-  },
-  achievementId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Achievement', 
-    required: true 
-  },
-  unlockedAt: { type: Date, default: Date.now },
-});
-
-// Certificate schema
-const certificateSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
-  },
-  courseId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Course', 
-    required: true 
-  },
-  certificateNumber: { type: String, unique: true, required: true },
-  issuedAt: { type: Date, default: Date.now },
-  verificationUrl: String,
-});
-
-// Create models
-export const Session = mongoose.model('Session', sessionSchema);
-export const User = mongoose.model('User', userSchema);
-export const Course = mongoose.model('Course', courseSchema);
-export const Module = mongoose.model('Module', moduleSchema);
-export const Task = mongoose.model('Task', taskSchema);
-export const TestCase = mongoose.model('TestCase', testCaseSchema);
-export const UserProgress = mongoose.model('UserProgress', userProgressSchema);
-export const Submission = mongoose.model('Submission', submissionSchema);
-export const Achievement = mongoose.model('Achievement', achievementSchema);
-export const UserAchievement = mongoose.model('UserAchievement', userAchievementSchema);
-export const Certificate = mongoose.model('Certificate', certificateSchema);
+// Sessions table for express-session
+export const sessions = pgTable('sessions', {
+  sid: varchar('sid', { length: 255 }).primaryKey(),
+  sess: text('sess').notNull(),
+  expire: timestamp('expire').notNull(),
+}, (table) => ({
+  expireIdx: index('sessions_expire_idx').on(table.expire),
+}));
 
 // Zod schemas for validation
-export const insertUserSchema = z.object({
+export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
   password: z.string().min(6),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  profileImageUrl: z.string().url().optional(),
   role: z.enum(['student', 'admin']).optional(),
-  xp: z.number().min(0).optional(),
-  streak: z.number().min(0).optional(),
-  lastLoginDate: z.date().optional(),
 });
+
+export const selectUserSchema = createSelectSchema(users);
 
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -235,95 +190,62 @@ export const registerSchema = z.object({
   role: z.enum(['student', 'admin']).optional(),
 });
 
-export const insertCourseSchema = z.object({
+export const insertCourseSchema = createInsertSchema(courses, {
   title: z.string().min(1),
-  description: z.string().optional(),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   order: z.number().min(0),
-  totalModules: z.number().min(0).optional(),
-  xpReward: z.number().min(0).optional(),
-  isActive: z.boolean().optional(),
 });
 
-export const insertModuleSchema = z.object({
-  courseId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
+export const insertModuleSchema = createInsertSchema(modules, {
   title: z.string().min(1),
-  description: z.string().optional(),
-  content: z.string().optional(),
   order: z.number().min(0),
-  xpReward: z.number().min(0).optional(),
-  isActive: z.boolean().optional(),
 });
 
-export const insertTaskSchema = z.object({
-  moduleId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
+export const insertTaskSchema = createInsertSchema(tasks, {
   title: z.string().min(1),
-  description: z.string().optional(),
   difficulty: z.enum(['easy', 'medium', 'hard']),
-  starterCode: z.string().optional(),
-  solution: z.string().optional(),
-  xpReward: z.number().min(0).optional(),
-  timeLimit: z.number().min(1).optional(),
-  memoryLimit: z.number().min(1).optional(),
   order: z.number().min(0),
-  isActive: z.boolean().optional(),
 });
 
-export const insertSubmissionSchema = z.object({
-  userId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  taskId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
+export const insertSubmissionSchema = createInsertSchema(submissions, {
   code: z.string().min(1),
-  language: z.string().optional(),
-  status: z.string().optional(),
-  executionTime: z.number().optional(),
-  memoryUsed: z.number().optional(),
-  testCasesPassed: z.number().min(0).optional(),
-  totalTestCases: z.number().min(0).optional(),
-  judge0Token: z.string().optional(),
 });
 
-export const insertTestCaseSchema = z.object({
-  taskId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  input: z.string().optional(),
-  expectedOutput: z.string().optional(),
-  isHidden: z.boolean().optional(),
+export const insertTestCaseSchema = createInsertSchema(testCases, {
   order: z.number().min(0),
 });
 
-export const insertAchievementSchema = z.object({
+export const insertAchievementSchema = createInsertSchema(achievements, {
   name: z.string().min(1),
-  description: z.string().optional(),
-  icon: z.string().optional(),
-  xpReward: z.number().min(0).optional(),
-  condition: z.string().optional(),
-  isActive: z.boolean().optional(),
 });
 
-export const insertUserAchievementSchema = z.object({
-  userId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  achievementId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  unlockedAt: z.date().optional(),
-});
-
-export const insertCertificateSchema = z.object({
-  userId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  courseId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  certificateNumber: z.string().min(1),
-  issuedAt: z.date().optional(),
-  verificationUrl: z.string().url().optional(),
-});
-
-export const insertUserProgressSchema = z.object({
-  userId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  courseId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId'),
-  moduleId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId').optional(),
-  taskId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId').optional(),
-  isCompleted: z.boolean().optional(),
-  completedAt: z.date().optional(),
-});
+export const insertUserAchievementSchema = createInsertSchema(userAchievements);
+export const insertCertificateSchema = createInsertSchema(certificates);
+export const insertUserProgressSchema = createInsertSchema(userProgress);
 
 // TypeScript types
-export type UpsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type Course = typeof courses.$inferSelect;
+export type NewCourse = typeof courses.$inferInsert;
+export type Module = typeof modules.$inferSelect;
+export type NewModule = typeof modules.$inferInsert;
+export type Task = typeof tasks.$inferSelect;
+export type NewTask = typeof tasks.$inferInsert;
+export type TestCase = typeof testCases.$inferSelect;
+export type NewTestCase = typeof testCases.$inferInsert;
+export type UserProgress = typeof userProgress.$inferSelect;
+export type NewUserProgress = typeof userProgress.$inferInsert;
+export type Submission = typeof submissions.$inferSelect;
+export type NewSubmission = typeof submissions.$inferInsert;
+export type Achievement = typeof achievements.$inferSelect;
+export type NewAchievement = typeof achievements.$inferInsert;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type NewUserAchievement = typeof userAchievements.$inferInsert;
+export type Certificate = typeof certificates.$inferSelect;
+export type NewCertificate = typeof certificates.$inferInsert;
+
+// Export validation schemas for API use
 export type LoginData = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
@@ -335,74 +257,3 @@ export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 export type InsertCertificate = z.infer<typeof insertCertificateSchema>;
 export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
-
-// Document types (for retrieved documents)
-export type UserDocument = mongoose.Document & {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  profileImageUrl?: string;
-  role: 'student' | 'admin';
-  xp: number;
-  streak: number;
-  lastLoginDate?: Date;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type CourseDocument = mongoose.Document & {
-  title: string;
-  description?: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  order: number;
-  totalModules: number;
-  xpReward: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type ModuleDocument = mongoose.Document & {
-  courseId: mongoose.Types.ObjectId;
-  title: string;
-  description?: string;
-  content?: string;
-  order: number;
-  xpReward: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type TaskDocument = mongoose.Document & {
-  moduleId: mongoose.Types.ObjectId;
-  title: string;
-  description?: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  starterCode?: string;
-  solution?: string;
-  xpReward: number;
-  timeLimit: number;
-  memoryLimit: number;
-  order: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type SubmissionDocument = mongoose.Document & {
-  userId: mongoose.Types.ObjectId;
-  taskId: mongoose.Types.ObjectId;
-  code: string;
-  language: string;
-  status?: string;
-  executionTime?: mongoose.Types.Decimal128;
-  memoryUsed?: number;
-  testCasesPassed: number;
-  totalTestCases: number;
-  judge0Token?: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
